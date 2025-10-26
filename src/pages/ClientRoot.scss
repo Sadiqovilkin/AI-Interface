@@ -1,0 +1,10 @@
+.clientMain{
+    display: flex;
+    flex-direction: column;
+    .sidebarOutlet{
+        display: flex;
+        main{
+            width: 80%;
+        }
+    }
+}

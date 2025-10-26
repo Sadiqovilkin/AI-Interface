@@ -1,128 +1,208 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import "./ChatUI.scss"
+
 const ChatUI = () => {
   const [messages, setMessages] = useState([
-    { id: 'a-1', role: 'assistant', content: 'Salam! DOCX faylını at, PPTX-ə çevirim (demo).' }
+    { id: 1, text: "Salam,", isBot: true, isTitle: true },
+    { id: 2, text: "Necə köməklik edə bilərəm?", isBot: true, isSubtitle: true }
   ])
-  const [input, setInput] = useState('')
-  const [isBusy, setIsBusy] = useState(false)
-  const bottomRef = useRef(null)
+  const [inputValue, setInputValue] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollToBottom()
   }, [messages])
 
-  const send = useCallback(() => {
-    const text = input.trim()
-    if (!text || isBusy) return
-    const userMsg = { id: `u-${Date.now()}` , role: 'user', content: text }
-    setMessages((prev) => [...prev, userMsg])
-    setInput('')
-  }, [input, isBusy])
+  // const quickActions = [
+  //   { id: 1, text: "HR təlimatları", icon: "↗" },
+  //   { id: 2, text: "Struktur info", icon: "↗" },
+  //   { id: 3, text: "Daxili prosedurlar", icon: "↗" }
+  // ]
 
-  const onDrop = useCallback(async (e) => {
-    e.preventDefault()
-    if (isBusy) return
-    const file = e.dataTransfer.files?.[0]
-    if (!file) return
-    if (!/\.docx$/i.test(file.name)) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: 'assistant', content: 'Yalnız .docx faylı qəbul olunur.' }
-      ])
-      return
+  const botResponses = [
+    "Bu mövzuda sizə kömək edə bilərəm. Daha ətraflı məlumat üçün hansı sahə ilə maraqlanırsınız?",
+    "Çox yaxşı sual! Bu barədə məlumat verə bilərəm. Əlavə suallarınız varmı?",
+    "Anladım. Bu məsələyə dair təfərrüatlı cavab verə bilərəm.",
+    "Mənim məlumat bazamda bu mövzu haqqında məlumat var. Daha spesifik bir şey soruşmaq istəyirsinizmi?",
+    "Əla! Bu sahədə sizə kömək edə bilərəm. Hansı konkret məsələ ilə bağlı kömək lazımdır?"
+  ]
+
+  const handleQuickAction = (actionText) => {
+    // Add user message
+    const userMessage = { 
+      id: Date.now(), 
+      text: actionText, 
+      isBot: false, 
+      isQuickAction: true 
     }
-    setIsBusy(true)
-    setMessages((prev) => [
-      ...prev,
-      { id: `sys-${Date.now()}`, role: 'assistant', content: 'Fayl qəbul olundu, konvertasiya hazırlanır (demo)...' }
-    ])
-    // Placeholder: burada real konvertasiyanı bağlaya bilərsiniz
-    await new Promise((r) => setTimeout(r, 900))
-    setMessages((prev) => [
-      ...prev,
-      { id: `a-${Date.now()}`, role: 'assistant', content: `${file.name} faylı üçün PPTX hazırdır (demo).` }
-    ])
-    setIsBusy(false)
-  }, [isBusy])
+    
+    setMessages(prev => [...prev, userMessage])
+    
+    // Auto response after delay
+    setTimeout(() => {
+      setIsTyping(true)
+      setTimeout(() => {
+        const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)]
+        const botMessage = { 
+          id: Date.now() + 1, 
+          text: randomResponse, 
+          isBot: true 
+        }
+        setMessages(prev => [...prev, botMessage])
+        setIsTyping(false)
+      }, 1500)
+    }, 500)
+  }
 
-  const prevent = useCallback((e) => e.preventDefault(), [])
+  const handleSendMessage = () => {
+    if (inputValue.trim() === '') return
 
-  const onPick = useCallback(async (e) => {
-    if (isBusy) return
+    // Add user message
+    const userMessage = { 
+      id: Date.now(), 
+      text: inputValue, 
+      isBot: false 
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    setInputValue('')
+    
+    // Auto response after delay
+    setTimeout(() => {
+      setIsTyping(true)
+      setTimeout(() => {
+        const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)]
+        const botMessage = { 
+          id: Date.now() + 1, 
+          text: randomResponse, 
+          isBot: true 
+        }
+        setMessages(prev => [...prev, botMessage])
+        setIsTyping(false)
+      }, 1500)
+    }, 500)
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage()
+    }
+  }
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!/\.docx$/i.test(file.name)) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: 'assistant', content: 'Yalnız .docx faylı qəbul olunur.' }
-      ])
-      e.target.value = ''
-      return
-    }
-    setIsBusy(true)
-    setMessages((prev) => [
-      ...prev,
-      { id: `sys-${Date.now()}`, role: 'assistant', content: `${file.name} qəbul olundu, konvertasiya hazırlanır (demo)...` }
-    ])
-    await new Promise((r) => setTimeout(r, 900))
-    setMessages((prev) => [
-      ...prev,
-      { id: `a-${Date.now()}`, role: 'assistant', content: `${file.name} faylı üçün PPTX hazırdır (demo).` }
-    ])
-    setIsBusy(false)
-    e.target.value = ''
-  }, [isBusy])
 
-  const openPicker = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
+    // Add file message
+    const fileMessage = { 
+      id: Date.now(), 
+      text: `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 
+      isBot: false,
+      isFile: true
+    }
+    
+    setMessages(prev => [...prev, fileMessage])
+    
+    // Auto response after delay
+    setTimeout(() => {
+      setIsTyping(true)
+      setTimeout(() => {
+        const fileResponses = [
+          `"${file.name}" faylı qəbul edildi. Bu fayl haqqında nə soruşmaq istəyirsiniz?`,
+          `Fayl yükləndi: ${file.name}. Bu fayl üzərində hansı əməliyyatı yerinə yetirmək istəyirsiniz?`,
+          `"${file.name}" faylı uğurla yükləndi. Faylın məzmunu haqqında məlumat almaq istəyirsinizmi?`,
+          `Fayl qəbul olundu. ${file.name} faylı üçün hansı xidməti istəyirsiniz?`
+        ]
+        const randomResponse = fileResponses[Math.floor(Math.random() * fileResponses.length)]
+        const botMessage = { 
+          id: Date.now() + 1, 
+          text: randomResponse, 
+          isBot: true 
+        }
+        setMessages(prev => [...prev, botMessage])
+        setIsTyping(false)
+      }, 1500)
+    }, 500)
+
+    // Reset file input
+    e.target.value = ''
+  }
 
   return (
-    <div className="chatgpt-shell">
-      <div className="chatgpt-header">AI Interface</div>
-      <div className="chatgpt-body">
-        <div
-          className="dropzone-embedded"
-          onDrop={onDrop}
-          onDragOver={prevent}
-          onDragEnter={prevent}
-          onDragLeave={prevent}
-        >
-          <div className="dz-title">DOCX → PPTX</div>
-          <div className="dz-sub">DOCX faylını bura atın</div>
-        </div>
-        <div className="message-list">
-          {messages.map((m) => (
-            <div key={m.id} className={`message message--${m.role}`}>
-              <div className="message-bubble">{m.content}</div>
+    <section id='ChatBot'>
+      <div className="container">
+        <div className="messageLists">
+          {messages.map((message) => (
+            <div key={message.id} className={`message ${message.isBot ? 'bot-message' : 'user-message'} ${message.isTitle ? 'title-message' : ''} ${message.isSubtitle ? 'subtitle-message' : ''} ${message.isQuickAction ? 'quick-action-message' : ''}`}>
+              {message.text}
             </div>
           ))}
-          <div ref={bottomRef} />
+          
+          {/* Quick action buttons - only show if no user messages yet
+          {messages.filter(m => !m.isBot).length === 0 && (
+            <div className="quick-actions">
+              {quickActions.map((action) => (
+                <button 
+                  key={action.id}
+                  className="quick-action-btn"
+                  onClick={() => handleQuickAction(action.text)}
+                >
+                  {action.text}
+                  <span className="action-icon">{action.icon}</span>
+                </button>
+              ))}
+            </div>
+          )} */}
+          
+          {isTyping && (
+            <div className="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className="chatBotInputs">
+          <input 
+            type="text" 
+            placeholder='Mesaj' 
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+          />
+          <button 
+            className="file-btn"
+            onClick={handleFileSelect}
+            type="button"
+            title="Fayl əlavə et"
+          >
+            📎
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+            accept="*/*"
+          />
+          <button onClick={handleSendMessage}>
+            ↑
+          </button>
         </div>
       </div>
-      <form className="message-input" onSubmit={(e) => { e.preventDefault(); send() }}>
-        <input
-          type="text"
-          placeholder="Mesaj yazın..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={isBusy}
-        />
-        <button type="button" className="dz-clip" onClick={openPicker} aria-label="DOCX seç" disabled={isBusy}>
-          <span className="dz-clip-icon">📎</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".docx"
-          style={{ display: 'none' }}
-          onChange={onPick}
-        />
-        <button type="submit" disabled={isBusy}>Göndər</button>
-      </form>
-    </div>
+    </section>
   )
 }
 
